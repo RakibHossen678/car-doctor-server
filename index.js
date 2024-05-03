@@ -58,6 +58,18 @@ async function run() {
       res.send(result)
     })
 
+    app.delete('/bookings/:id',async(req,res)=>{
+      const id=req.params.id
+      const query={_id:new ObjectId(id)}
+      const result=await booingCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    app.put('/bookings/:id',async(req,res)=>{
+      const updatedBooking=req.body
+      console.log(updatedBooking)
+    })
+
     // Send a ping to confirm a successful connection
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
