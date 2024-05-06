@@ -10,7 +10,11 @@ const port = process.env.PORT || 5000;
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: [
+      'http://localhost:5173',
+      "https://car-doctor-bf3b2.web.app",
+      "https://car-doctor-bf3b2.firebaseapp.com",
+    ],
     credentials: true,
   })
 );
@@ -40,26 +44,29 @@ const verifyToken = async (req, res, next) => {
   if (!token) {
     return res.status(401).send({ message: "not authorized" });
   }
-  jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
-    if(err){
-      console.log(err)
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      console.log(err);
       return res.status(401).send({ message: "not authorized" });
     }
-    console.log('value in the token',decoded)
-    req.user=decoded
+    console.log("value in the token", decoded);
+    req.user = decoded;
 
     next();
-  })
- 
+  });
 };
-
+const cookieOptions = {
+  httpOnly: true,
+  secure:  process.env.NODE_ENV === "production" ? true : false,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+};
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
 
     //auth related api
 
-    app.post("/jwt",logger,  async (req, res) => {
+    app.post("/jwt", logger, async (req, res) => {
       const user = req.body;
       console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -67,25 +74,21 @@ async function run() {
       });
 
       res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: false,
-          sameSite:'none'
-        })
+        .cookie("token", token, cookieOptions)
         .send({ success: true });
     });
 
-    app.post('/logout',async(req,res)=>{
-      const user=req.body
-      console.log('log in out',user)
-      res.clearCookie('token',{maxAge:0}).send({success:true})
-    })
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("log in out", user);
+      res.clearCookie("token", { ...cookieOptions ,maxAge: 0 }).send({ success: true });
+    });
 
     //services related api
     const serviceCollection = client.db("carDoctorDB").collection("services");
     const booingCollection = client.db("carDoctorDB").collection("bookings");
 
-    app.get("/services",  async (req, res) => {
+    app.get("/services", async (req, res) => {
       const cursor = serviceCollection.find();
       const result = await cursor.toArray();
       res.send(result);
@@ -98,12 +101,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/bookings",logger, verifyToken,async (req, res) => {
+    app.get("/bookings", logger, verifyToken, async (req, res) => {
       console.log(req.query.email);
       console.log("token", req.cookies.token);
-      console.log('from valid token',req.user)
-      if(req.query.email !== req.user.email){
-        return res.status(403).send({message:'forbidden access'})
+      console.log("from valid token", req.user);
+      if (req.query.email !== req.user.email) {
+        return res.status(403).send({ message: "forbidden access" });
       }
       let query = {};
       if (req.query?.email) {
